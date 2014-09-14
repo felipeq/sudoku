@@ -2,7 +2,23 @@
 #include <string>
 using namespace std;
 bool puzzle[9][9][9];
+bool origin[9][9][9];
+bool easy_mode = true;
 // position of field in puzzle
+void copyOriginToPuzzle()
+{
+	for (int i = 0; i < 9; i++)
+		for (int j = 0; j < 9; j++)
+			for (int k = 0; k < 9; k++)
+				puzzle[i][j][k] = origin[i][j][k];
+}
+void copyPuzzleToOrigin()
+{
+	for (int i = 0; i < 9; i++)
+		for (int j = 0; j < 9; j++)
+			for (int k = 0; k < 9; k++)
+				origin[i][j][k] = puzzle[i][j][k];
+}
 struct Field
 {
 	int x;
@@ -41,6 +57,19 @@ void setValueFor(Field pos, int value)
 {
 	if (value != 0)
 		puzzle[pos.x][pos.y][value - 1] = true;
+}
+string parsePuzzle()
+{
+	string res;
+	for (int row = 0; row < 9; row++)
+	{
+		for (int column = 0; column < 9; column++)
+		{
+			res += toChar(getValueFor(Field{ row, column }));
+		}
+		res += "\n";
+	}
+	return res;
 }
 void drawPuzzle()
 {
@@ -135,15 +164,47 @@ bool KeepSolving()
 				firstUnsolved = pos;
 				return true;
 			}
-
 		}
 	}
 	return false;
 }
+Field getEasiestField(int minimumOfAssumptions)
+{
+	for (int row = 0; row < 9; row++)
+	{
+		for (int column = 0; column < 9; column++)
+		{
+			int possibleSolutions = 0;
+			for (int value = 0; value < 9; value++)
+			{
+				if (puzzle[row][column][value] == true)
+					possibleSolutions++;
+			}
+			if (possibleSolutions == minimumOfAssumptions)
+				return{ row, column };
+		}
+	}
+	return getEasiestField(minimumOfAssumptions++);
+}
+bool areWeFucked(string before, string after)
+{
+	if (before == after)
+	{
+		if (easy_mode == true)
+			copyPuzzleToOrigin();
+		easy_mode = false;
+		return true;
+	}
+	else
+		return false;
+
+}
 void CheckAllFields()
 {
+
 	while (KeepSolving())
 	{
+		string beforeSolving = parsePuzzle();
 		for (int row = firstUnsolved.x; row < 9; row++)
 		{
 			for (int column = firstUnsolved.y; column < 9; column++)
@@ -152,19 +213,49 @@ void CheckAllFields()
 				CheckHorizontalLineFor(p);
 				CheckSquareFor(p);
 			}
-
 		}
 
+		string afterSolving = parsePuzzle();
+		if (areWeFucked(beforeSolving, afterSolving))
+		{
+			Field easiestField = getEasiestField(2);
+			cout << afterSolving << endl;
+			for (int i = 0; i < 9; i++)
+			{
+				// mamy coœ do za³o¿enia
+				if (puzzle[easiestField.x][easiestField.y][i] == true)
+				{
+					bool backup[9];
+					// wyzeruj pozosta³e
+					for (int j = i + 1; j < 9; j++)
+					{
+						backup[j] = puzzle[easiestField.x][easiestField.y][j];
+						puzzle[easiestField.x][easiestField.y][j] = false;
+					}
+					CheckAllFields();
+					if (!KeepSolving())
+						return;
+					else
+					{
+						for (int j = i + 1; j < 0; j++)
+						{
+							puzzle[easiestField.x][easiestField.y][j] = backup[j];
+						}
+					}
 
-		//drawPuzzle();
+				}
+			}
+		}
+
 	}
 
 }
+
 void main(int argc, char* argv[])
 {
 
-	string testInput = "...629.489...71..36...859.1724....6....85217...876............98.12475.6..6.384.7";
-	string testOutput = "135629748;982471653;647385921;724193865;369852174;518764392;473516289;891247536;256938417;";
+	string testInput =	"9.....4366..7..9..24.8.........8.75....2.3....51.4.........8.75..9..2..1178.....3";
+	string testOutput = "485697321;291453678;736128954;917365842;648271593;523849167;859714236;164932785;372586419;";
 	cout << "===========================\n";
 	cout << "INPUT:\n";
 	for (int row = 0; row < 9; row++)
@@ -177,31 +268,24 @@ void main(int argc, char* argv[])
 			for (int k = 0; k < 9; k++)
 			{
 				if (input != '.')
-					puzzle[row][column][k] = false;
+					origin[row][column][k] = false;
 				else
 				{
-					puzzle[row][column][k] = true;
+					origin[row][column][k] = true;
 				}
 
 			}
 			if (input != '.')
-				puzzle[row][column][toInt(input) - 1] = true;
+				origin[row][column][toInt(input) - 1] = true;
 		}
 	}
-
+	copyOriginToPuzzle();
 	drawPuzzle();
 	CheckAllFields();
 	cout << "OUTPUT:\n";
 	drawPuzzle();
-	string res = "";
-	for (int row = 0; row < 9; row++)
-	{
-		for (int column = 0; column < 9; column++)
-		{
-			res += toChar(getValueFor(Field{ row, column }));
-		}
-		res += ";";
-	}
+	string res = parsePuzzle();
+
 	if (res.compare(testOutput) == 0)
 		cout << "===========================\nPRAWIDLOWY WYNIK\n===========================\n";
 }
