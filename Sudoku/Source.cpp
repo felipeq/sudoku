@@ -8,6 +8,7 @@ struct Field
 	int x;
 	int y;
 };
+Field firstUnsolved = { 0, 0 };
 int toInt(char arg)
 {
 	return arg - 48;
@@ -29,12 +30,17 @@ int getValueFor(Field pos)
 				Value = i + 1;
 			else
 			{
-				isSolved == false;
+				isSolved = false;
 				return 0;
 			}
 		}
 	}
 	return Value;
+}
+void setValueFor(Field pos, int value)
+{
+	if (value != 0)
+		puzzle[pos.x][pos.y][value - 1] = true;
 }
 void drawPuzzle()
 {
@@ -78,17 +84,24 @@ void CheckSquareFor(Field pos)
 void CheckHorizontalLineFor(Field pos)
 {
 	int row = pos.x;
-	for (int column = 0; column < 9; column++)
+	int column = pos.y;
+	for (int i = 0; i < 9; i++)
 	{
-		Field pos = { row, column };
-		int FieldValue = getValueFor(pos);
-		if (FieldValue != 0)
+		Field horizontalField = { row, i };
+		int horizontalValue = getValueFor(horizontalField);
+		Field verticalField = { i, column };
+		int verticalValue = getValueFor(verticalField);
+		if (horizontalValue != 0 || verticalValue != 0)
 		{
-			for (int i = 0; i < 9; i++)
+			for (int j = 0; j < 9; j++)
 			{
-				puzzle[row][i][FieldValue - 1] = false;
+				if (horizontalValue != 0)
+					puzzle[row][j][horizontalValue - 1] = false;
+				if (verticalValue != 0)
+					puzzle[j][column][verticalValue - 1] = false;
 			}
-			puzzle[row][column][FieldValue - 1] = true;
+			setValueFor(horizontalField, horizontalValue);
+			setValueFor(verticalField, verticalValue);
 		}
 	}
 
@@ -118,7 +131,11 @@ bool KeepSolving()
 		{
 			Field pos = { row, column };
 			if (getValueFor(pos) == 0)
+			{
+				firstUnsolved = pos;
 				return true;
+			}
+
 		}
 	}
 	return false;
@@ -126,16 +143,21 @@ bool KeepSolving()
 void CheckAllFields()
 {
 	while (KeepSolving())
-		for (int row = 0; row < 9; row++)
+	{
+		for (int row = firstUnsolved.x; row < 9; row++)
 		{
-		for (int column = 0; column < 9; column++)
-		{
-			Field pos = { row, column };
-			CheckHorizontalLineFor(pos);
-			CheckVerticalLineFor(pos);
-			CheckSquareFor(pos);
+			for (int column = firstUnsolved.y; column < 9; column++)
+			{
+				Field p = { row, column };
+				CheckHorizontalLineFor(p);
+				CheckSquareFor(p);
+			}
+
 		}
-		}
+
+
+		//drawPuzzle();
+	}
 
 }
 void main(int argc, char* argv[])
